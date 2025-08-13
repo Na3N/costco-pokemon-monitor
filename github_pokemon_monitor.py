@@ -396,9 +396,17 @@ def main():
         else:
             logging.info("No new products found")
         
-        # Store known products for next run (as environment variable for simplicity)
+        # Store known products for next run using GitHub Output environment file
         known_products_str = '||'.join(monitor.known_products)
-        print(f"::set-output name=known_products::{known_products_str}")
+        
+        # Use the new GitHub Actions output method
+        github_output = os.environ.get('GITHUB_OUTPUT')
+        if github_output:
+            with open(github_output, 'a') as f:
+                f.write(f"known_products={known_products_str}\n")
+        else:
+            # Fallback for local testing (non-GitHub environment)
+            logging.info(f"Known products: {known_products_str}")
         
     else:
         logging.warning("No products found - website might be down or structure changed")

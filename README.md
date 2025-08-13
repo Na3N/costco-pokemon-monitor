@@ -97,3 +97,5 @@ Costco Australia's website loads content dynamically with JavaScript. This monit
 🐛 **Found an issue?** Open an issue or submit a pull request.
 
 🎮 **Happy Pokemon hunting!**
+
+<!-- Last updated: 2025-08-13 11:11 UTC - Monitor active -->

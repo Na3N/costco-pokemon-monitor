@@ -42,16 +42,31 @@ class GitHubCostcoPokemonMonitor:
         self.load_known_products_from_github()
     
     def load_known_products_from_github(self):
-        """Load previously found products from GitHub artifact or environment"""
-        # In GitHub Actions, we'll use a simple approach with environment variables
-        # or check for artifacts from previous runs
-        env_products = os.environ.get('KNOWN_PRODUCTS', '')
-        if env_products:
-            try:
-                self.known_products = set(env_products.split('||'))
-                logging.info(f"Loaded {len(self.known_products)} known products from environment")
-            except Exception as e:
-                logging.error(f"Error loading products from environment: {e}")
+        """Load previously found products from JSON file"""
+        try:
+            if os.path.exists('known_products.json'):
+                with open('known_products.json', 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.known_products = set(data.get('products', []))
+                    logging.info(f"Loaded {len(self.known_products)} known products from file")
+            else:
+                logging.info("No previous products file found, starting fresh")
+        except Exception as e:
+            logging.error(f"Error loading products from file: {e}")
+            self.known_products = set()
+    
+    def save_known_products_to_github(self):
+        """Save known products to JSON file for next run"""
+        try:
+            data = {
+                'products': list(self.known_products),
+                'last_updated': datetime.now().isoformat()
+            }
+            with open('known_products.json', 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            logging.info(f"Saved {len(self.known_products)} known products to file")
+        except Exception as e:
+            logging.error(f"Error saving products to file: {e}")
     
     def setup_driver(self):
         """Setup Chrome WebDriver with appropriate options for GitHub Actions"""
@@ -392,21 +407,11 @@ def main():
             
             if ntfy_topic:
                 monitor.send_ntfy_notification(new_products, ntfy_topic)
-            
         else:
             logging.info("No new products found")
         
-        # Store known products for next run using GitHub Output environment file
-        known_products_str = '||'.join(monitor.known_products)
-        
-        # Use the new GitHub Actions output method
-        github_output = os.environ.get('GITHUB_OUTPUT')
-        if github_output:
-            with open(github_output, 'a') as f:
-                f.write(f"known_products={known_products_str}\n")
-        else:
-            # Fallback for local testing (non-GitHub environment)
-            logging.info(f"Known products: {known_products_str}")
+        # Save known products for next run
+        monitor.save_known_products_to_github()
         
     else:
         logging.warning("No products found - website might be down or structure changed")

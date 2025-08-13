@@ -13,7 +13,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -34,6 +36,14 @@ jobs:
         NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       run: |
         python github_pokemon_monitor.py
+        
+    - name: Commit and push known products file
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add known_products.json || true
+        git diff --staged --quiet || git commit -m "Update known products list [skip ci]"
+        git push || true
         
     # Success notifications removed to reduce noise
     # Daily status updates will be sent via daily-status.yml workflow

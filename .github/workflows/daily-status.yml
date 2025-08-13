@@ -1,0 +1,33 @@
+name: Daily Status Report
+
+on:
+  schedule:
+    # Send daily status at 9 AM UTC (adjust to your timezone)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  daily-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Send Daily Status
+      env:
+        DISCORD_WEBHOOK_STATUS: ${{ secrets.DISCORD_WEBHOOK_STATUS }}
+      run: |
+        if [ -n "$DISCORD_WEBHOOK_STATUS" ]; then
+          curl -X POST "$DISCORD_WEBHOOK_STATUS" \
+            -H "Content-Type: application/json"
+            -d '{
+              "content": "📊 Daily Pokemon Monitor Status Report",
+              "embeds": [{
+                "title": "🎮 Pokemon Monitor - Daily Health Check",
+                "description": "Your Pokemon monitor is running successfully!\n\n• **Frequency**: Every hour\n• **Target**: Costco Australia Pokemon products\n• **Status**: ✅ Active\n• **Next check**: Within the hour",
+                "color": 3447003,
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'",
+                "footer": {
+                  "text": "Pokemon Monitor by GitHub Actions"
+                }
+              }]
+            }'
+        fi

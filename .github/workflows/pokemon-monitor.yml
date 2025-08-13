@@ -1,0 +1,58 @@
+name: Costco Pokemon Monitor
+
+on:
+  schedule:
+    # Run every hour at minute 0
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        pip install selenium requests beautifulsoup4 webdriver-manager
+        
+    - name: Install Chrome
+      uses: browser-actions/setup-chrome@latest
+      
+    - name: Run Pokemon Monitor
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_NEW_PRODUCTS }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      run: |
+        python github_pokemon_monitor.py
+        
+    # Success notifications removed to reduce noise
+    # Daily status updates will be sent via daily-status.yml workflow
+        
+    - name: Send Status Notification (Failure)
+      if: failure()
+      env:
+        DISCORD_WEBHOOK_ERRORS: ${{ secrets.DISCORD_WEBHOOK_ERRORS }}
+      run: |
+        if [ -n "$DISCORD_WEBHOOK_ERRORS" ]; then
+          curl -X POST "$DISCORD_WEBHOOK_ERRORS" \
+            -H "Content-Type: application/json"
+            -d '{
+              "content": "❌ Pokemon Monitor Status: FAILED at $(date)",
+              "embeds": [{
+                "title": "Monitor Alert",
+                "description": "Pokemon monitor encountered an error. Check the Actions log for details.",
+                "color": 16711680,
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"
+              }]
+            }'
+        fi
